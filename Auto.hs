@@ -2,8 +2,6 @@
 100 pytań do:
 - czy w fromLists trzeba wykrywac nielegalne automaty? np takie, które mają
     przejście do stanu x ale nie maja stanu x
-- czy jest jakis sprytny sposob na przechodzenie miedzy reprezentacja 
-    funkcyjna a listowa?
 -}
 
 data Auto a q = A {
@@ -12,6 +10,9 @@ data Auto a q = A {
     isAccepting :: q -> Bool,
     transition  :: q -> a -> [q]
 }
+
+instance (Show a, Enum a, Bounded a, Show q) => Show (Auto a q) where
+    show aut = "fromLists " ++ (show (toLists aut))
 
 emptyA :: Auto a ()
 emptyA = A { 
@@ -37,15 +38,30 @@ symA c = A {
         transition = \q -> \a -> if not q && a == c then [True] else []
     }
 
--------------- JAK DOTĄD CHYBA OK --------------
-
 fromLists :: (Eq q, Eq a) => [q] -> [q] -> [q] -> [(q,a,[q])] -> Auto a q
 fromLists s is acc tr = A {
         states = s,
         initStates = is,
         isAccepting = \q -> elem q acc,
-        transition = \q -> \a -> concat [l | (q', a', l) <- tr, q' == q, a' == a]
+        transition = \q -> \a -> concat [l | (q',a',l) <- tr, q' == q, a' == a]
     }
+
+toLists :: (Enum a,Bounded a) => Auto a q -> ([q],[q],[q],[(q,a,[q])])
+toLists a = (
+        states a,
+        initStates a,
+        filter (isAccepting a) (states a),
+        genTransitions a
+    )
+
+genTransitions :: (Enum a,Bounded a) => Auto a q -> [(q,a,[q])]
+genTransitions aut = [(q,a,trans q a) | a <- [minBound .. maxBound], 
+                                        q <- states aut,
+                                        length (trans q a) > 0
+                     ]
+                     where trans = transition aut
+
+-------------- JAK DOTĄD CHYBA OK --------------
 
 accepts :: Eq q => Auto a q -> [a] -> Bool
 accepts a w = accepts' a (initStates a) w
