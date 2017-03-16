@@ -1,8 +1,17 @@
-{-
-100 pytań do:
-- czy w fromLists trzeba wykrywac nielegalne automaty? np takie, które mają
-    przejście do stanu x ale nie maja stanu x
--}
+module Auto (
+    Auto,
+    emptyA,
+    epsA,
+    symA,
+    fromLists,
+    toLists,
+    leftA,
+    sumA,
+    thenA,
+    accepts
+) where
+
+import Data.List (nub)
 
 data Auto a q = A {
     states      :: [q],
@@ -61,7 +70,49 @@ genTransitions aut = [(q,a,trans q a) | a <- [minBound .. maxBound],
                      ]
                      where trans = transition aut
 
+leftA :: Auto a q -> Auto a (Either q r)
+leftA aut = A {
+        states = mapToLeft (states aut),
+        initStates = mapToLeft (initStates aut),
+        isAccepting = either caseLeftAcc caseRightAcc,
+        transition = newTrans
+    }
+    where caseLeftAcc = isAccepting aut
+          caseRightAcc q = False
+          newTrans q a = either (caseLeftTrans a) caseRightTrans q
+          caseLeftTrans a q = mapToLeft $(transition aut) q a
+          caseRightTrans q = []
+
+mapToLeft :: [a] -> [Either a r]
+mapToLeft = map Left
+
+mapToRight :: [a] -> [Either r a]
+mapToRight = map Right
+
+sumA :: Auto a q1 -> Auto a q2 -> Auto a (Either q1 q2)
+sumA aut1 aut2 = A {
+        states = (mtl $states aut1) ++ (mtr $states aut2),
+        initStates = (mtl $initStates aut1) ++ (mtr $states aut2),
+        isAccepting = either caseLeftAcc caseRightAcc,
+        transition = newTrans
+    }
+    where mtl = mapToLeft
+          mtr = mapToRight
+          caseLeftAcc = isAccepting aut1
+          caseRightAcc = isAccepting aut2
+          newTrans q a = either (caseLeftTrans a) (caseRightTrans a) q
+          caseLeftTrans a q = mapToLeft $(transition aut1) q a
+          caseRightTrans a q = mapToRight $(transition aut2) q a
+
 -------------- JAK DOTĄD CHYBA OK --------------
+
+thenA :: Auto a q1 -> Auto a q2 -> Auto a (Either q1 q2)
+thenA aut1 aut2 = A { 
+        states = [], 
+        initStates = [],
+        isAccepting = \q -> False, 
+        transition = \q -> \a -> [] 
+    }
 
 accepts :: Eq q => Auto a q -> [a] -> Bool
 accepts a w = accepts' a (initStates a) w
@@ -70,5 +121,5 @@ accepts' :: Eq q => Auto a q -> [q] -> [a] -> Bool
 accepts' _ [] _ = False
 accepts' a s [] = any (isAccepting a) s
 accepts' a s (w:ws) = accepts' a s' ws
-                      where s' = concat (map f s)
+                      where s' = nub $concat (map f s)
                             f = \x -> (transition a) x w
