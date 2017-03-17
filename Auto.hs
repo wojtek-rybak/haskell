@@ -92,27 +92,38 @@ mapToRight = map Right
 sumA :: Auto a q1 -> Auto a q2 -> Auto a (Either q1 q2)
 sumA aut1 aut2 = A {
         states = (mtl $states aut1) ++ (mtr $states aut2),
-        initStates = (mtl $initStates aut1) ++ (mtr $states aut2),
+        initStates = (mtl $initStates aut1) ++ (mtr $initStates aut2),
         isAccepting = either caseLeftAcc caseRightAcc,
         transition = newTrans
     }
-    where mtl = mapToLeft
-          mtr = mapToRight
-          caseLeftAcc = isAccepting aut1
+    where caseLeftAcc = isAccepting aut1
           caseRightAcc = isAccepting aut2
           newTrans q a = either (caseLeftTrans a) (caseRightTrans a) q
-          caseLeftTrans a q = mapToLeft $(transition aut1) q a
-          caseRightTrans a q = mapToRight $(transition aut2) q a
+          caseLeftTrans a q = mtl $(transition aut1) q a
+          caseRightTrans a q = mtr $(transition aut2) q a
+          mtl = mapToLeft
+          mtr = mapToRight
+          
 
 -------------- JAK DOTĄD CHYBA OK --------------
 
 thenA :: Auto a q1 -> Auto a q2 -> Auto a (Either q1 q2)
 thenA aut1 aut2 = A { 
-        states = [], 
-        initStates = [],
-        isAccepting = \q -> False, 
-        transition = \q -> \a -> [] 
+        states = (mtl $states aut1) ++ (mtr $states aut2), 
+        initStates = mtl $initStates aut1,
+        isAccepting = either caseLeftAcc caseRightAcc, 
+        transition = newTrans
     }
+    where caseLeftAcc q = False
+          caseRightAcc = isAccepting aut2
+          newTrans q a = either (caseLeftTrans a) (caseRightTrans a) q
+          caseLeftTrans a q = case (isAccepting aut1) q of
+              True -> [] ++ (mtl $(transition aut1) q a) --TODO
+              False -> mtl $(transition aut1) q a
+          caseRightTrans a q = mtr $(transition aut2) q a
+          mtl = mapToLeft
+          mtr = mapToRight
+
 
 accepts :: Eq q => Auto a q -> [a] -> Bool
 accepts a w = accepts' a (initStates a) w
