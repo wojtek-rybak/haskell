@@ -45,7 +45,7 @@ main = do
   writeln "testThenA"
   quickCheck  testThenA
 ------------------------------------------------------------
--- Hic sunt leones
+-- Hic svnt leones
 ------------------------------------------------------------
 
 instance Arbitrary AB where

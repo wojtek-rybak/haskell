@@ -103,27 +103,25 @@ sumA aut1 aut2 = A {
           caseRightTrans a q = mtr $(transition aut2) q a
           mtl = mapToLeft
           mtr = mapToRight
-          
-
--------------- JAK DOTĄD CHYBA OK --------------
 
 thenA :: Auto a q1 -> Auto a q2 -> Auto a (Either q1 q2)
 thenA aut1 aut2 = A { 
         states = (mtl $states aut1) ++ (mtr $states aut2), 
-        initStates = mtl $initStates aut1,
+        initStates = newInits,
         isAccepting = either caseLeftAcc caseRightAcc, 
         transition = newTrans
     }
-    where caseLeftAcc q = False
+    where newInits = addEpsilons (initStates aut1)
+          caseLeftAcc q = False
           caseRightAcc = isAccepting aut2
           newTrans q a = either (caseLeftTrans a) (caseRightTrans a) q
-          caseLeftTrans a q = case (isAccepting aut1) q of
-              True -> [] ++ (mtl $(transition aut1) q a) --TODO
-              False -> mtl $(transition aut1) q a
+          caseLeftTrans a q = addEpsilons $(transition aut1) q a
           caseRightTrans a q = mtr $(transition aut2) q a
+          addEpsilons q = case any (isAccepting aut1) q of 
+              True -> mtl q ++ mtr (initStates aut2)
+              False -> mtl q
           mtl = mapToLeft
           mtr = mapToRight
-
 
 accepts :: Eq q => Auto a q -> [a] -> Bool
 accepts a w = accepts' a (initStates a) w
