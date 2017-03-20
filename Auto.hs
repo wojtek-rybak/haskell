@@ -61,29 +61,28 @@ fromLists :: (Eq q, Eq a) => [q] -> [q] -> [q] -> [(q,a,[q])] -> Auto a q
 fromLists s is acc tr = A {
         states = s,
         initStates = is,
-        isAccepting = \q -> elem q acc,
-        transition = \q -> \a -> concat [l | (q',a',l) <- tr, q' == q, a' == a]
+        isAccepting = newAcc,
+        transition = newTrans
     }
+    where newAcc q = elem q acc
+          newTrans q a = concat [l | (q',a',l) <- tr, q' == q, a' == a]
 
 toLists :: (Enum a,Bounded a) => Auto a q -> ([q],[q],[q],[(q,a,[q])])
 toLists aut = (
         states aut,
         initStates aut,
         filter (isAccepting aut) (states aut),
-        genTransitions aut
+        [(q,a,trans q a) |
+          a <- [minBound .. maxBound],
+          q <- states aut,
+          length (trans q a) > 0
+        ]
     )
-
-genTransitions :: (Enum a,Bounded a) => Auto a q -> [(q,a,[q])]
-genTransitions aut = [(q,a,trans q a) |
-                       a <- [minBound .. maxBound],
-                       q <- states aut,
-                       length (trans q a) > 0
-                     ]
-                     where trans = transition aut
+    where trans = transition aut
 
 leftA :: Auto a q -> Auto a (Either q r)
 leftA aut = A {
-        states = mapToLeft (states aut),
+        states = mtl (states aut),
         initStates = mtl (initStates aut),
         isAccepting = either (isAccepting aut) false,
         transition = newTrans
