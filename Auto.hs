@@ -27,25 +27,35 @@ emptyA :: Auto a ()
 emptyA = A { 
         states = [], 
         initStates = [],
-        isAccepting = \q -> False, 
-        transition = \q -> \a -> [] 
+        isAccepting = false, 
+        transition = emptyTransitions
     }
 
 epsA :: Auto a ()
 epsA = A {
         states = [()],
         initStates = [()],
-        isAccepting = \q -> True,
-        transition = \q -> \a -> []
+        isAccepting = true,
+        transition = emptyTransitions
     }
+
+false :: a -> Bool
+false _ = False
+
+true :: a -> Bool
+true _ = True
+
+emptyTransitions :: q -> a -> [q]
+emptyTransitions _ _ = []
 
 symA :: Eq a => a -> Auto a Bool
 symA c = A {
         states = [True, False],
         initStates = [False],
         isAccepting = id,
-        transition = \q -> \a -> if not q && a == c then [True] else []
+        transition = trans
     }
+    where trans q a = if (not q) && (a == c) then [True] else []
 
 fromLists :: (Eq q, Eq a) => [q] -> [q] -> [q] -> [(q,a,[q])] -> Auto a q
 fromLists s is acc tr = A {
@@ -64,30 +74,23 @@ toLists aut = (
     )
 
 genTransitions :: (Enum a,Bounded a) => Auto a q -> [(q,a,[q])]
-genTransitions aut = [(q,a,trans q a) | a <- [minBound .. maxBound], 
-                                        q <- states aut,
-                                        length (trans q a) > 0
+genTransitions aut = [(q,a,trans q a) |
+                       a <- [minBound .. maxBound],
+                       q <- states aut,
+                       length (trans q a) > 0
                      ]
                      where trans = transition aut
 
 leftA :: Auto a q -> Auto a (Either q r)
 leftA aut = A {
         states = mapToLeft (states aut),
-        initStates = mapToLeft (initStates aut),
-        isAccepting = either caseLeftAcc caseRightAcc,
+        initStates = mtl (initStates aut),
+        isAccepting = either (isAccepting aut) false,
         transition = newTrans
     }
-    where caseLeftAcc = isAccepting aut
-          caseRightAcc q = False
-          newTrans q a = either (caseLeftTrans a) caseRightTrans q
-          caseLeftTrans a q = mapToLeft $(transition aut) q a
-          caseRightTrans q = []
-
-mapToLeft :: [a] -> [Either a r]
-mapToLeft = map Left
-
-mapToRight :: [a] -> [Either r a]
-mapToRight = map Right
+    where newTrans q a = either (caseLeftTrans a) caseRightTrans q
+          caseLeftTrans a q = mtl $(transition aut) q a
+          caseRightTrans _ = []
 
 sumA :: Auto a q1 -> Auto a q2 -> Auto a (Either q1 q2)
 sumA aut1 aut2 = A {
@@ -99,8 +102,6 @@ sumA aut1 aut2 = A {
     where newTrans q a = either (caseLeftTrans a) (caseRightTrans a) q
           caseLeftTrans a q = mtl $(transition aut1) q a
           caseRightTrans a q = mtr $(transition aut2) q a
-          mtl = mapToLeft
-          mtr = mapToRight
 
 thenA :: Auto a q1 -> Auto a q2 -> Auto a (Either q1 q2)
 thenA aut1 aut2 = A { 
@@ -115,16 +116,25 @@ thenA aut1 aut2 = A {
           addEpsilons q = case any (isAccepting aut1) q of 
               True -> mtl q ++ mtr (initStates aut2)
               False -> mtl q
-          mtl = mapToLeft
-          mtr = mapToRight
-          false _ = False
 
 accepts :: Eq q => Auto a q -> [a] -> Bool
 accepts aut w = acceptsRec aut (initStates aut) w
 
 acceptsRec :: Eq q => Auto a q -> [q] -> [a] -> Bool
 acceptsRec _ [] _ = False
-acceptsRec aut s [] = any (isAccepting aut) s
-acceptsRec aut s (w:ws) = acceptsRec aut newStates ws
-                          where newStates = nub $concat (map f s)
-                                f state = (transition aut) state w
+acceptsRec aut states [] = any (isAccepting aut) states
+acceptsRec aut states (w:ws) = acceptsRec aut newStates ws
+                               where newStates = nub $concat (map f states)
+                                     f state = (transition aut) state w
+
+mapToLeft :: [a] -> [Either a r]
+mapToLeft = map Left
+
+mapToRight :: [a] -> [Either r a]
+mapToRight = map Right
+
+mtl :: [a] -> [Either a r]
+mtl = mapToLeft
+
+mtr :: [a] -> [Either r a]
+mtr = mapToRight
