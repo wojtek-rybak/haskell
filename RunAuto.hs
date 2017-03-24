@@ -47,7 +47,7 @@ check s = if length (lines s) >= 4 then
           else "BAD INPUT"
           where parsedAuto = parseAuto (init l)
                 parsedWord = mapM readAlphaM (last l)
-                l = lines s
+                l = filter ("" /=) (lines s)
 
 
 
