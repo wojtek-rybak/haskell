@@ -126,14 +126,10 @@ acceptsRec aut states (w:ws) = acceptsRec aut newStates ws
                                where newStates = nub $concat (map f states)
                                      f state = (transition aut) state w
 
-mapToLeft :: [a] -> [Either a r]
-mapToLeft = map Left
-
-mapToRight :: [a] -> [Either r a]
-mapToRight = map Right
-
+-- mapToLeft
 mtl :: [a] -> [Either a r]
-mtl = mapToLeft
+mtl = map Left
 
+-- mapToRight
 mtr :: [a] -> [Either r a]
-mtr = mapToRight
+mtr = map Right
