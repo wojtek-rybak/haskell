@@ -53,8 +53,8 @@ check s = if length (lines s) >= 4 then
 
 parseAuto :: [String] -> Maybe (Auto Alpha Int)
 parseAuto (n:init:acc:tr) = liftM4 fromLists (liftM gen (readMaybe n))
-                                             (readMaybe init :: Maybe [Int]) 
-                                             (readMaybe acc :: Maybe [Int]) 
+                                             (readMaybe init)
+                                             (readMaybe acc)
                                              (parseTr tr)
 parseAuto _ = Nothing
 
