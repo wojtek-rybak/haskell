@@ -2,6 +2,8 @@ import System.Environment
 import System.Exit
 import Text.Read
 import Control.Monad
+import Data.List
+import Data.Maybe
 
 import Auto
 
@@ -40,7 +42,7 @@ parse _ = (putStrLn "Wrong number of params.") >> (exitWith ExitSuccess)
 
 
 check :: String -> String
-check s = if length (lines s) >= 4 then
+check s = if length l >= 4 && hasCorrectStates (init l) then
               case liftM2 accepts parsedAuto parsedWord of
                   Just b -> show b
                   Nothing -> "BAD INPUT"
@@ -48,6 +50,30 @@ check s = if length (lines s) >= 4 then
           where parsedAuto = parseAuto (init l)
                 parsedWord = mapM readAlphaM (last l)
                 l = filter ("" /=) (lines s)
+
+
+hasCorrectStates :: [String] -> Bool
+hasCorrectStates (n:is:as:tr) = case liftM4 checkStates (readMaybe n)
+                                                        (readMaybe is)
+                                                        (readMaybe as)
+                                                        (Just (extractStates tr))
+                                of
+                                    Just b -> b
+                                    Nothing -> False
+hasCorrectStates _ = False
+
+
+
+checkStates :: Int -> [Int] -> [Int] -> [Int] -> Bool
+checkStates n is as tr = all inRange is &&
+                         all inRange as &&
+                         all inRange tr
+                         where inRange x = x <= n && x > 0
+
+
+
+extractStates :: [String] -> [Int]
+extractStates = catMaybes . (map readMaybe) . concat . (map words)
 
 
 
