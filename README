@@ -1,0 +1,32 @@
+Implementacja niedeterministycznych automatów skończonych.
+
+
+Format pliku wejściowego:
+
+liczba stanów
+lista stanów startowych
+lista stanów akceptujących
+stan symbole stan ... stan
+...
+stan symbole stan ... stan
+słowo
+
+na przykład:
+
+4
+[1]
+[3,4]
+1 C 1 2
+1 AB 1
+2 B 3
+3 A 4
+ABABABACBA
+
+
+Sposób użycia:
+
+ghc RunAuto.hs
+./RunAuto Test.in
+
+Jeżeli automat akceptuje słowo, wynikiem jest True. 
+W przeciwnym wypadku wynik to False.
